@@ -71,7 +71,7 @@
 
     <div id="savingOverlay">
         <div class="spinner"></div>
-        <h2 style="margin-top: 20px; color: var(--primary);">Đang lưu nhận xét của Quý Thầy...</h2>
+        <h2 style="margin-top: 20px; color: var(--primary);">Đang lưu nhận xét...</h2>
     </div>
 
     <div class="app-wrapper" id="appWrapper">
@@ -261,7 +261,7 @@
                 const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(updateData) });
                 const result = await res.json();
                 if(result.status === "success") {
-                    alert("A Di Đà Phật! Đã lưu kết quả chấm thi thành công.");
+                    alert(" Đã lưu kết quả chấm thi thành công.");
                 }
             } catch(e) { alert("Lỗi khi lưu dữ liệu!"); }
             document.getElementById('savingOverlay').style.display = 'none';
