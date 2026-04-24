@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cổng Chấm Thi Ban Huấn Luyện - PQQ</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #8a1c14; --secondary: #d35400; --bg: #f8f9fa; --border: #dee2e6; --success: #198754; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: var(--bg); color: #333; height: 100vh; display: flex; overflow: hidden; }
+
+        /* LOADING & ENTRY SCREEN */
+        #entryScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .btn-start { background: linear-gradient(135deg, var(--primary), #c0392b); color: white; padding: 15px 40px; border-radius: 30px; border: none; font-weight: bold; cursor: pointer; font-size: 1.2rem; box-shadow: 0 5px 15px rgba(138, 28, 20, 0.3); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(138, 28, 20, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(138, 28, 20, 0); } 100% { box-shadow: 0 0 0 0 rgba(138, 28, 20, 0); } }
+        
+        #loader { display: none; flex-direction: column; justify-content: center; align-items: center; height: 100vh; position: fixed; top: 0; left: 0; width: 100%; background: #fff; z-index: 2000;}
+        .progress-container { width: 80%; max-width: 500px; background: #eee; border-radius: 20px; height: 25px; overflow: hidden; margin-top: 20px;}
+        .progress-bar { height: 100%; width: 0%; background: var(--primary); transition: 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; font-weight: bold; }
+
+        /* LAYOUT CHÍNH */
+        .app-wrapper { display: none; width: 100%; height: 100%; }
+        .sidebar { width: 320px; background: white; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; border-bottom: 2px solid var(--primary); background: #fdf2f2; }
+        .club-list { flex: 1; overflow-y: auto; list-style: none; padding: 10px; }
+        .club-item { padding: 12px 15px; margin-bottom: 5px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: 500; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent;}
+        .club-item:hover { background: #fef5f5; border-color: #f5c6cb; }
+        .club-item.active { background: var(--primary); color: white; }
+        .count-badge { background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; padding: 20px; overflow: hidden; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: white; padding: 15px 20px; border-radius: 10px; border-left: 5px solid var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        /* BẢNG CHẤM THI */
+        .table-container { flex: 1; background: white; border-radius: 10px; overflow: auto; border: 1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; min-width: 1100px; }
+        th { background: #f8f9fa; color: var(--primary); position: sticky; top: 0; z-index: 10; padding: 15px; text-align: left; font-size: 0.9rem; border-bottom: 2px solid var(--border); }
+        td { padding: 12px 15px; border-bottom: 1px solid var(--border); vertical-align: top; }
+
+        /* TEXTAREA NHẬN XÉT NHIỀU DÒNG */
+        .comment-area { width: 100%; min-height: 80px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; outline: none; font-size: 0.9rem; resize: vertical; transition: 0.2s; background: #fffcf5; }
+        .comment-area:focus { border-color: var(--secondary); background: #fff; box-shadow: 0 0 5px rgba(211, 84, 0, 0.2); }
+
+        .btn-save { background: var(--success); color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+        .btn-save:hover { background: #146c43; transform: translateY(-2px); }
+
+        .btn-video { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; background: #e8f4f8; color: #0d6efd; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 0.8rem; border: 1px solid #b6d4fe; }
+
+        /* OVERLAY LƯU */
+        #savingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 4000; display: none; flex-direction: column; justify-content: center; align-items: center; }
+        .spinner { width: 50px; height: 50px; border: 5px solid #ddd; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <audio id="bgMusic" loop><source src="nhac_cho.mp3" type="audio/mpeg"></audio>
+
+    <div id="entryScreen">
+        <h1 style="color: var(--primary); margin-bottom: 10px;">CỔNG CHẤM THI BAN HUẤN LUYỆN</h1>
+        <p style="color: #666; margin-bottom: 30px;">Hệ thống xét duyệt thăng đai chính thức</p>
+        <button class="btn-start" onclick="startApp()">KHỞI ĐỘNG HỆ THỐNG</button>
+    </div>
+
+    <div id="loader">
+        <h2 style="color: var(--primary);">Đang quét danh sách võ sinh đăng ký...</h2>
+        <div class="progress-container"><div class="progress-bar" id="progressBar">0%</div></div>
+        <p id="progressStatus" style="margin-top: 10px; color: #666;">Đang kết nối API...</p>
+    </div>
+
+    <div id="savingOverlay">
+        <div class="spinner"></div>
+        <h2 style="margin-top: 20px; color: var(--primary);">Đang lưu nhận xét của Quý Thầy...</h2>
+    </div>
+
+    <div class="app-wrapper" id="appWrapper">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3 style="color: var(--primary); font-size: 1rem;">ĐƠN VỊ CÓ THÍ SINH (<span id="clubCount">0</span>)</h3>
+            </div>
+            <ul class="club-list" id="clubList"></ul>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <h2 id="currentClubTitle" style="font-size: 1.3rem; color: var(--primary);">Hãy chọn đơn vị để chấm thi</h2>
+                <button class="btn-save" onclick="saveGrading()" id="btnSave" style="display: none;">
+                    <i class="fas fa-check-double"></i> XÁC NHẬN & LƯU KẾT QUẢ
+                </button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="50px">STT</th>
+                            <th width="180px">Họ và Tên</th>
+                            <th width="80px">Năm Sinh</th>
+                            <th width="150px">Cấp Đai</th>
+                            <th width="120px">Tỷ Lệ HT</th>
+                            <th width="120px">Bài Dự Thi</th>
+                            <th>Nhận xét về bài thi (Quý Thầy ghi tại đây)</th>
+                            <th width="120px" style="text-align: center;">Đủ ĐK thi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="8" style="text-align: center; padding: 50px; color: #999;">Danh sách trống. Vui lòng chọn một CLB bên trái.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // DÁN LINK API CỦA BẠN VÀO ĐÂY:
+        // ==========================================
+        const API_URL = "https://script.google.com/macros/s/AKfycbzjyh8A9nJtbOwJ_Vl6MrK-JAYsU0B22gixMWK5da6gRM8zgYg9-G07rmY-nVbBJhML4A/exec"; 
+        
+        let allStudents = [];
+        let clubsWithStudents = [];
+        let currentProgress = 0;
+        let progressInterval;
+
+        function formatDate(dateStr) {
+            if (!dateStr) return "---";
+            const d = new Date(dateStr);
+            return !isNaN(d.getTime()) ? d.getFullYear().toString() : dateStr;
+        }
+
+        function startApp() {
+            document.getElementById('entryScreen').style.display = 'none';
+            const audio = document.getElementById('bgMusic');
+            audio.volume = 0.4; 
+            audio.play().catch(e => console.log("Lỗi nhạc"));
+            
+            document.getElementById('loader').style.display = 'flex';
+            startLoadingSimulation();
+            fetchData();
+        }
+
+        function startLoadingSimulation() {
+            progressInterval = setInterval(() => {
+                if (currentProgress < 95) {
+                    currentProgress += Math.floor(Math.random() * 10) + 1;
+                    if(currentProgress > 95) currentProgress = 95;
+                    document.getElementById('progressBar').style.width = currentProgress + "%";
+                    document.getElementById('progressBar').innerText = currentProgress + "%";
+                }
+            }, 400);
+        }
+
+        async function fetchData() {
+            try {
+                const res = await fetch(API_URL);
+                const json = await res.json();
+                if (json.status === "success") {
+                    allStudents = json.data;
+                    
+                    // Lọc ra những CLB thực sự có học viên đã đăng ký
+                    const tempClubs = [...new Set(allStudents.map(s => s.club))];
+                    tempClubs.sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+                    clubsWithStudents = tempClubs;
+
+                    document.getElementById('clubCount').innerText = clubsWithStudents.length;
+                    renderSidebar();
+                    
+                    clearInterval(progressInterval);
+                    document.getElementById('progressBar').style.width = "100%";
+                    document.getElementById('progressBar').innerText = "100%";
+                    
+                    setTimeout(() => {
+                        // TẮT NHẠC NỀN SAU KHI LOAD XONG Ở ĐÂY
+                        const audio = document.getElementById('bgMusic');
+                        if(audio) {
+                            audio.pause();
+                            audio.currentTime = 0; 
+                        }
+                        
+                        document.getElementById('loader').style.display = 'none';
+                        document.getElementById('appWrapper').style.display = 'flex';
+                    }, 800);
+                }
+            } catch(e) { alert("Lỗi kết nối API!"); }
+        }
+
+        function renderSidebar() {
+            const list = document.getElementById('clubList');
+            list.innerHTML = '';
+            clubsWithStudents.forEach(clubName => {
+                const count = allStudents.filter(s => s.club === clubName).length;
+                const li = document.createElement('li');
+                li.className = 'club-item';
+                li.innerHTML = `<span>${clubName}</span> <span class="count-badge">${count} em</span>`;
+                li.onclick = function() {
+                    document.querySelectorAll('.club-item').forEach(el => el.classList.remove('active'));
+                    this.classList.add('active');
+                    loadGradingTable(clubName);
+                };
+                list.appendChild(li);
+            });
+        }
+
+        function loadGradingTable(clubName) {
+            document.getElementById('currentClubTitle').innerText = `Ban Huấn Luyện đang chấm: ${clubName}`;
+            document.getElementById('btnSave').style.display = 'flex';
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            const list = allStudents.filter(s => s.club === clubName);
+            list.forEach((item, idx) => {
+                // Xử lý Progress bar
+                let percent = parseFloat(item.progress.toString().replace('%','')) || 0;
+                if(percent <= 1 && percent > 0 && item.progress.toString().indexOf('%') === -1) percent *= 100;
+                
+                const progressHtml = `<div style="background:#eee; border-radius:5px; height:15px; position:relative; overflow:hidden; border:1px solid #ccc;">
+                    <div style="background:${percent>=80?'#198754':'#0d6efd'}; width:${percent}%; height:100%;"></div>
+                    <span style="position:absolute; top:0; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:bold; color: ${percent > 50 ? '#fff' : '#333'};">${percent}%</span>
+                </div>`;
+
+                const videoHtml = item.link ? `<a href="${item.link}" target="_blank" class="btn-video"><i class="fas fa-play"></i> Xem Video</a>` : `<small style="color:#999">Chưa có</small>`;
+                const isChecked = item.isFinal ? "checked" : "";
+
+                tbody.innerHTML += `
+                    <tr class="student-row" data-name="${item.name}">
+                        <td style="font-weight:bold; color:var(--primary); text-align:center;">${idx + 1}</td>
+                        <td><b>${item.name}</b></td>
+                        <td>${formatDate(item.year)}</td>
+                        <td><span style="padding:3px 8px; background:#f0f0f0; border-radius:4px; font-size:0.8rem;">${item.belt}</span></td>
+                        <td>${progressHtml}</td>
+                        <td>${videoHtml}</td>
+                        <td>
+                            <textarea class="comment-area" placeholder="Nhập nhận xét của Thầy tại đây...">${item.comment}</textarea>
+                        </td>
+                        <td style="text-align:center;">
+                            <input type="checkbox" class="final-checkbox" style="width:22px; height:22px; cursor:pointer;" ${isChecked}>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        async function saveGrading() {
+            const activeClub = document.querySelector('.club-item.active');
+            if(!activeClub) return;
+            const clubName = activeClub.querySelector('span').innerText;
+            const rows = document.querySelectorAll('.student-row');
+            
+            let updateData = [];
+            rows.forEach(row => {
+                updateData.push({
+                    name: row.getAttribute('data-name'),
+                    club: clubName,
+                    comment: row.querySelector('.comment-area').value,
+                    isFinal: row.querySelector('.final-checkbox').checked ? "TRUE" : "FALSE"
+                });
+            });
+
+            document.getElementById('savingOverlay').style.display = 'flex';
+            try {
+                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(updateData) });
+                const result = await res.json();
+                if(result.status === "success") {
+                    alert("A Di Đà Phật! Đã lưu kết quả chấm thi thành công.");
+                }
+            } catch(e) { alert("Lỗi khi lưu dữ liệu!"); }
+            document.getElementById('savingOverlay').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
